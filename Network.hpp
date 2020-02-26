@@ -6,7 +6,7 @@
 #include "NetworkState.hpp"
 #include "ActivationFunction.hpp"
 #include "Layer.hpp"
-
+#include "GenoType.hpp"
 
 
 using Eigen::MatrixXd;
@@ -30,25 +30,63 @@ namespace DNN {
     Network(const std::vector<int> layer_dimensions, std::vector<std::vector<int>> layer_connections) :
       layer_dimensions(layer_dimensions),
       layer_connections(layer_connections) {
-      n_layers = layer_dimensions.size();
+        n_layers = layer_dimensions.size();
+        for(int layer_index = 0; layer_index < n_layers; layer_index++) {
+          layers.push_back(new Layer(layer_dimensions[layer_index], layer_index));
+        }
+        for(int connection_index = 0; connection_index < layer_connections.size(); connection_index++) {
+          int lhs_index = layer_connections[connection_index][0];
+          int rhs_index = layer_connections[connection_index][1];
+          layers[rhs_index]->connectLayer(layers[lhs_index]);
+        }
+    }
 
-      for(int layer_index = 0; layer_index < n_layers; layer_index++) {
-        layers.push_back(new Layer(layer_dimensions[layer_index], layer_index));
+    Network(Evolution::GenoType genotype) {
+      std::vector<Evolution::GenoConnection> connections = genotype.getConnections();
+      std::vector<Evolution::GenoNode> nodes = genotype.getNodes();
+      std::vector<Evolution::GenoNode> inputNodes = genotype.getInputNodes();
+      std::vector<Evolution::GenoNode> outputNodes = genotype.getOutputNodes();
+      layer_dimensions = std::vector<int>();
+      layer_connections = std::vector<std::vector<int>>();
+
+      for(int i = 0; i < nodes.size(); i++) {
+        layer_dimensions.push_back(1);
+        layers.push_back(new Layer(1, i));
       }
-      for(int connection_index = 0; connection_index < layer_connections.size(); connection_index++) {
-        int lhs_index = layer_connections[connection_index][0];
-        int rhs_index = layer_connections[connection_index][1];
-        layers[rhs_index]->connectLayer(layers[lhs_index]);
+      n_layers = layers.size();
+
+      for(int i = 0; i < connections.size(); i++) {
+        if(connections[i].enabled) {
+          double weight = connections[i].weight;
+          if(connections[i].inId == -1) {
+            layers[connections[i].outId]->setBias(weight);
+          } else {
+            std::vector<int> connection = {connections[i].inId, connections[i].outId};
+            layer_connections.push_back(connection);
+            MatrixXd weight_matrix = MatrixXd::Constant(1,1, weight);
+            layers[connections[i].outId]->connectLayer(layers[connections[i].inId], weight_matrix);
+          }
+        }
       }
+
     }
 
     VectorXd getLayerState(int layer_index) {
       return layers[layer_index]->getState();
     }
 
-    void feedforwardStep(VectorXd input) {
+    void setInputNodes(VectorXd input) {
+      if(layers[0]->getSize() == input.size()) {
+        layers[0]->setState(input);
+      } else {
+        for(int i = 0; i < input.size(); i++) {
+          layers[i]->setState(input.segment(i,1));
+        }
+      }
+    }
 
-      layers[0]->setState(input);
+    void feedforwardStep(VectorXd input) {
+      setInputNodes(input);
       for(int layer_index = 0; layer_index < n_layers; layer_index++) {
         layers[layer_index]->step();
       }

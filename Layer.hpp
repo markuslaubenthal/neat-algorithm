@@ -22,6 +22,7 @@ namespace DNN {
 
     double voltage_inhibitory = -0.1;
     double voltage_excitatory = 0.1;
+    double dormant_phase = 0;
 
 
     MatrixXd bias_weights;
@@ -37,7 +38,7 @@ namespace DNN {
     // Layer() {}
 
     Layer(int size, int id) : size(size), id(id) {
-      temporary_state = VectorXd(size);
+      temporary_state = VectorXd::Zero(size);
       state = VectorXd::Zero(size);
       bias_weights = MatrixXd::Constant(size, 1, -0.1);
       last_activity = VectorXd::Constant(size, -10);
@@ -55,6 +56,10 @@ namespace DNN {
       return weight_matrices;
     }
 
+    void setBias(double weight) {
+      bias_weights = MatrixXd::Constant(size, 1, weight);
+    }
+
     VectorXd getState() const {
       return state;
     }
@@ -63,83 +68,122 @@ namespace DNN {
       state = new_state;
     }
 
-    void setActivity(VectorXd layer_output) {
+    void setActivityVector(VectorXd layer_output) {
       VectorXd new_activity = layer_output.unaryExpr(&thresholdFunction);
       last_activity = last_activity.array() + (new_activity.array() * ((double)t - last_activity.array()));
     }
 
     void connectLayer(Layer* layer) {
-      connecting_layers.push_back(layer);
 
       // Setup Weight Matrix
       MatrixXd weight_matrix(size, layer->getSize());
       weight_matrix << MatrixXd::Random(size,layer->getSize());
-      weight_matrices.push_back(weight_matrix);
+      connectLayer(layer, weight_matrix);
+    }
 
-      // Setup Usage Matrices
+    void connectLayer(Layer* layer, MatrixXd weight_matrix) {
+      connecting_layers.push_back(layer);
+      weight_matrices.push_back(weight_matrix);
+      setupUsageMatrices(layer);
+      // setupNeuroTransmitterMatrices(layer);
+    }
+
+    void setupUsageMatrices(Layer* layer) {
       MatrixXd usage_matrix(size, layer->getSize());
+
       usage_matrix << MatrixXd::Zero(size,layer->getSize());
       short_term_weight_usage_matrices.push_back(usage_matrix);
 
-      // MatrixXd usage_matrix(size, layer->getSize());
       usage_matrix << MatrixXd::Zero(size,layer->getSize());
       long_term_weight_usage_matrices.push_back(usage_matrix);
+    }
 
-      MatrixXd inhibitory = MatrixXd::Constant(size,layer->getSize(), 10);
+    void setupNeuroTransmitterMatrices(Layer* layer) {
+      MatrixXd inhibitory = MatrixXd::Random(size,layer->getSize()) * 10;
       inhibitory_receptors.push_back(inhibitory);
-      MatrixXd excitatory = MatrixXd::Constant(size,layer->getSize(), 10);
-      excitatory_receptors.push_back(inhibitory);
 
+      MatrixXd excitatory = MatrixXd::Random(size,layer->getSize()) * 10;
+      excitatory_receptors.push_back(excitatory);
+
+      inhibitory = MatrixXd::Random(size,layer->getSize()) * 10;
+      inhibitory_transmitters.push_back(inhibitory);
+
+      excitatory = MatrixXd::Random(size,layer->getSize()) * 10;
+      excitatory_transmitters.push_back(excitatory);
+    }
+
+    VectorXd calculateActivityMatrix() {
+      VectorXd activity(size);
+      activity = (t - last_activity.array() - dormant_phase);
+      activity = activity.unaryExpr(&activityFunction);
+      return activity;
+    }
+
+    VectorXd calculateLayerOutput(VectorXd activityVector) {
+      temporary_state = bias_weights.array() - 1000 * activityVector.array();
+
+
+      // std::cout << temporary_state.transpose() << std::endl;
+
+
+      for(int layer_index = 0; layer_index < connecting_layers.size(); layer_index++) {
+        MatrixXd *weight_matrix = getWeightMatrix(layer_index);
+
+        Layer* layer = connecting_layers[layer_index];
+        VectorXd input = layer->getState();
+
+        MatrixXd delta = *weight_matrix * layer->getState();
+        // std::cout << *weight_matrix << std::endl;
+        temporary_state += delta;
+      }
+      temporary_state = temporary_state.unaryExpr(&thresholdFunction);
+      return temporary_state;
+    }
+
+    // Calculate weights that contributed to activity of each neuron
+    void calculateUsageMatrices() {
+      for(int layer_index = 0; layer_index < connecting_layers.size(); layer_index++) {
+        Layer* layer = connecting_layers[layer_index];
+
+        // Short term Memory, has value in (0, 10], goes through shifted
+        // logistic function from -2 to 8 probably
+        // TODO: Drop rate to be determined
+        // on successfull usage of a neuron, its matrix value will be set to 10
+        // and drop from there one
+        MatrixXd* usageMatrix = &short_term_weight_usage_matrices[layer_index];
+        MatrixXd tmpUsage = temporary_state * layer->getState().transpose();
+        *usageMatrix = 0.95 * usageMatrix->cwiseMax(10 * tmpUsage);
+
+        // Long term Memory
+        // High value means high frequency
+        // Threshold to be identified
+        usageMatrix = &long_term_weight_usage_matrices[layer_index];
+        *usageMatrix = 0.99 * (*usageMatrix + tmpUsage);
+      }
     }
 
     VectorXd step() {
       t++;
-      VectorXd activity(size);
-
-      double dormant_phase = 5;
-
-      activity = (t - last_activity.array() - dormant_phase);
-      activity = activity.unaryExpr(&activityFunction);
-
+      VectorXd activityVector(size);
+      activityVector = calculateActivityMatrix();
 
       if(connecting_layers.size() > 0) {
-        temporary_state = bias_weights.array() - 1000 * activity.array();
-        for(int layer_index = 0; layer_index < connecting_layers.size(); layer_index++) {
-          Layer* layer = connecting_layers[layer_index];
-          VectorXd input = layer->getState();
-          MatrixXd delta = weight_matrices[layer_index] * layer->getState();
-          temporary_state += delta;
-        }
-        temporary_state = temporary_state.unaryExpr(&thresholdFunction);
-
-        // Calculate weights that contributed to activity of each neuron
-        for(int layer_index = 0; layer_index < connecting_layers.size(); layer_index++) {
-          Layer* layer = connecting_layers[layer_index];
-
-          // Short term Memory, has value in (0, 10], goes through shifted
-          // logistic function from -2 to 8 probably
-          // TODO: Drop rate to be determined
-          // on successfull usage of a neuron, its matrix value will be set to 10
-          // and drop from there one
-          MatrixXd* usageMatrix = &short_term_weight_usage_matrices[layer_index];
-          MatrixXd tmpUsage = temporary_state * layer->getState().transpose();
-          *usageMatrix = 0.95 * usageMatrix->cwiseMax(10 * tmpUsage);
-
-          // Long term Memory
-          // High value means high frequency
-          // Threshold to be identified
-          usageMatrix = &long_term_weight_usage_matrices[layer_index];
-          *usageMatrix = 0.99 * (*usageMatrix + tmpUsage);
-        }
-
-        // std::cout << short_term_weight_usage_matrices[0] << std::endl;
-
-        setActivity(temporary_state);
-
+        calculateLayerOutput(activityVector);
+        calculateUsageMatrices();
+        setActivityVector(temporary_state);
         return temporary_state;
       } else {
         return state;
       }
+    }
+
+
+    MatrixXd *calculateWeightMatrix(int index) {
+      weight_matrices[index] =
+          excitatory_transmitters[index].cwiseProduct(excitatory_receptors[index]) * voltage_excitatory
+          + inhibitory_transmitters[index].cwiseProduct(inhibitory_receptors[index]) * voltage_inhibitory;
+
+      return &weight_matrices[index];
     }
 
     MatrixXd *getWeightMatrix(int index) {
@@ -148,6 +192,23 @@ namespace DNN {
 
     std::vector<Layer*> getConnections() {
       return connecting_layers;
+    }
+
+    // TODO: fix parameters. cwiseMax(20) is a random guess.
+    void addExcitatoryTransmitters() {
+      for(int layer_index = 0; layer_index < excitatory_transmitters.size(); layer_index++) {
+        MatrixXd *transmitter = &excitatory_transmitters[layer_index];
+        *transmitter += 0.1 * short_term_weight_usage_matrices[layer_index];
+        *transmitter = transmitter->cwiseMax(20);
+      }
+    }
+
+    void addInhibitoryTransmitters() {
+      for(int layer_index = 0; layer_index < excitatory_transmitters.size(); layer_index++) {
+        MatrixXd *transmitter = &inhibitory_transmitters[layer_index];
+        *transmitter += 0.1 * short_term_weight_usage_matrices[layer_index];
+        *transmitter = transmitter->cwiseMax(20);
+      }
     }
 
     void update() {
