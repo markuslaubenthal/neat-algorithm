@@ -32,7 +32,6 @@ namespace Evolution {
 
   class GenoType {
     std::vector<GenoNode> nodes;
-    std::vector<GenoConnection> connections;
     int *innovNo;
 
     void setInputNodes(int amount) {
@@ -46,6 +45,7 @@ namespace Evolution {
     }
 
     public:
+      std::vector<GenoConnection> connections;
       double fitness = 0;
       std::vector<GenoNode> hiddenNodes;
       std::vector<GenoNode> inputNodes;
@@ -114,7 +114,7 @@ namespace Evolution {
 
     bool connectionExists(int inId, int outId) {
       for(int i = 0; i < connections.size(); i++) {
-        if(connections[i].inId == inId && connections[i].outId == outId && connections[i].enabled) return true;
+        if(connections[i].inId == inId && connections[i].outId == outId) return true;
       }
       return false;
     }
@@ -133,19 +133,33 @@ namespace Evolution {
         connections[connectionId].enabled = false;
         int inId = connections[connectionId].inId;
         int outId = connections[connectionId].outId;
-        addConnection(inId, newNodeId, randomWeight(), true);
-        addConnection(newNodeId, outId, randomWeight(), true);
+        addConnection(inId, newNodeId, 1, true);
+        addConnection(newNodeId, outId, connections[connectionId].weight, true);
       }
     }
 
-    void mutateAddConnection() {
+    void toggleConnection(int inId, int outId) {
+      for(int i = 0; i < connections.size(); i++) {
+        if(connections[i].inId == inId && connections[i].outId == outId) {
+          connections[i].enabled = !connections[i].enabled;
+          return;
+        }
+      }
+    }
+
+    void mutateConnection() {
       // Add Random connection
       int numberNonMutatableNodes = inputNodes.size() + outputNodes.size();
       int inId = rand() % (nodes.size());
       int outId = rand() % (nodes.size());
-      if(inId != outId && !connectionExists(inId, outId)
-        && outId >= inputNodes.size()) {
-        addConnection(inId, outId, randomWeight(), true);
+      bool conExists = connectionExists(inId, outId);
+      if(inId != outId) {
+
+        if(outId >= inputNodes.size() && !conExists) {
+          addConnection(inId, outId, randomWeight(), true);
+        } else if(conExists) {
+          toggleConnection(inId, outId);
+        }
       }
     }
 
@@ -172,11 +186,10 @@ namespace Evolution {
 
     void mutate() {
       double p = (double)rand() / RAND_MAX;
-      if(p > 0.6) {
-        if(nodes.size() < 4)
-          mutateAddNode();
-      } else if (p > 0.3) {
-        mutateAddConnection();
+      if(p > 0.95) {
+        mutateAddNode();
+      } else if (p > 0.45) {
+        mutateConnection();
       } else {
         mutateWeight();
       }
