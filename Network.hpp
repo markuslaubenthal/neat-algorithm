@@ -43,7 +43,7 @@ namespace DNN {
 
     Network(Evolution::GenoType genotype) {
       std::vector<Evolution::GenoConnection> connections = genotype.getConnections();
-      std::vector<Evolution::GenoNode> nodes = genotype.getNodes();
+      std::vector<Evolution::GenoNode *> nodes = genotype.getNodes();
       std::vector<Evolution::GenoNode> inputNodes = genotype.getInputNodes();
       std::vector<Evolution::GenoNode> outputNodes = genotype.getOutputNodes();
       layer_dimensions = std::vector<int>();
