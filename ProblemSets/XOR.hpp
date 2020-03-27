@@ -31,10 +31,10 @@ namespace ProblemSets {
       inputs.push_back(input);
 
       VectorXd output = VectorXd(1);
-      output << 1;
-      outputs.push_back(output);
-      outputs.push_back(output);
       output << 0;
+      outputs.push_back(output);
+      outputs.push_back(output);
+      output << 1;
       outputs.push_back(output);
       outputs.push_back(output);
     }
@@ -46,15 +46,17 @@ namespace ProblemSets {
     }
 
     double evaluate(std::vector<VectorXd> output) {
-      int reward = 0;
+      double reward = 0;
       VectorXd expected_output = outputs[state];
       for(int i = 0; i < output.size(); i++) {
-        if(i == 1 && !expected_output.isApprox(output[i])) {
-          reward -= 1;
+        if(i == 1) {
+          // std::cout << "Evaluation: " << std::endl;
+          // std::cout << (expected_output - output[i]) << std::endl;
+          // std::cout << "Norm: " << (expected_output - output[i]).norm() << std::endl;
+          reward += 1 - (expected_output - output[i]).norm();
+          // std::cout << output[i] << std::endl;
         }
-        // if(expected_output.isApprox(output[i])) {
-        //   reward += 1;
-        // } else {
+        // if(i == 1 && !expected_output.isApprox(output[i])) {
         //   reward -= 1;
         // }
       }

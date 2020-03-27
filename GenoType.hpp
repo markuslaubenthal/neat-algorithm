@@ -3,55 +3,59 @@
 
 #include <eigen3/Eigen/Dense>
 #include <sstream>
+#include <vector>
 
+// namespace Evolution {
+//   class GenoType;
+// }
+
+#include "HistoricalMarking.hpp"
+#include "GenoConnection.hpp"
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using Eigen::ArrayXd;
 
 namespace Evolution {
+  class HistoricalMarking;
   struct GenoNode {
-    double bias;
-  };
+    int id;
+    // double bias;
 
-  struct GenoConnection {
-    int inId;
-    int outId;
-    double weight;
-    bool enabled;
-    int innovNo;
-    GenoConnection(int inId, int outId, double weight, bool enabled, int innovNo) :
-      inId(inId), outId(outId), weight(weight), enabled(enabled), innovNo(innovNo) {
-    }
-
-    std::string toString() {
-      std::stringstream ss;
-      return "In:  " + std::to_string(inId) + "\n" + "Out: " + std::to_string(outId) + "\n" + "w:   " + std::to_string(weight);
-    }
+    GenoNode() {}
 
   };
 
   class GenoType {
-    std::vector<GenoNode> nodes;
+    std::vector<HistoricalMarking> *markingHistory;
+    std::vector<GenoNode *> nodes;
     int *innovNo;
 
+
     void setInputNodes(int amount) {
-      inputNodes = std::vector<GenoNode>(amount);
+      inputNodes = std::vector<GenoNode>();
+      for(int i = 0; i < amount; i++) {
+        inputNodes.push_back(GenoNode());
+      }
       mergeNodes();
     }
 
     void setOutputNodes(int amount) {
-      outputNodes = std::vector<GenoNode>(amount);
+      outputNodes = std::vector<GenoNode>();
+      for(int i = 0; i < amount; i++) {
+        outputNodes.push_back(GenoNode());
+      }
       mergeNodes();
     }
 
     public:
-      std::vector<GenoConnection> connections;
-      double fitness = 0;
-      std::vector<GenoNode> hiddenNodes;
-      std::vector<GenoNode> inputNodes;
-      std::vector<GenoNode> outputNodes;
-    GenoType(int *innovNo) : innovNo(innovNo) {
-      nodes = std::vector<GenoNode>();
+    std::vector<GenoConnection> connections;
+    double fitness = 0;
+    std::vector<GenoNode> hiddenNodes;
+    std::vector<GenoNode> inputNodes;
+    std::vector<GenoNode> outputNodes;
+    GenoType(int *innovNo, std::vector<HistoricalMarking> *markingHistory)
+      : innovNo(innovNo), markingHistory(markingHistory) {
+      nodes = std::vector<GenoNode *>();
       inputNodes = std::vector<GenoNode>();
       outputNodes = std::vector<GenoNode>();
       hiddenNodes = std::vector<GenoNode>();
@@ -74,6 +78,7 @@ namespace Evolution {
       return line1 + "\n" + s_connections;
     }
 
+
     void addConnection(int inId, int outId, double weight, bool enabled) {
       GenoConnection con(inId, outId, weight, enabled, *innovNo);
       (*innovNo)++;
@@ -88,7 +93,7 @@ namespace Evolution {
     std::vector<GenoConnection> getConnections() {
       return connections;
     }
-    std::vector<GenoNode> getNodes() {
+    std::vector<GenoNode *> getNodes() {
       return nodes;
     }
     std::vector<GenoNode> getInputNodes() {
@@ -99,9 +104,16 @@ namespace Evolution {
     }
 
     void mergeNodes() {
-      nodes = std::vector<GenoNode>(inputNodes);
-      nodes.insert(nodes.end(), outputNodes.begin(), outputNodes.end());
-      nodes.insert(nodes.end(), hiddenNodes.begin(), hiddenNodes.end());
+      nodes = std::vector<GenoNode *>();
+      for(int i = 0; i < inputNodes.size(); i++) {
+        nodes.push_back(&inputNodes[i]);
+      }
+      for(int i = 0; i < outputNodes.size(); i++) {
+        nodes.push_back(&outputNodes[i]);
+      }
+      for(int i = 0; i < hiddenNodes.size(); i++) {
+        nodes.push_back(&hiddenNodes[i]);
+      }
     }
 
     void setInputAndOutputNodes(int input, int output) {
@@ -109,6 +121,11 @@ namespace Evolution {
       setOutputNodes(output);
       for(int i = 0; i < output; i++) {
         addConnection(-1, inputNodes.size() + i, randomWeight(), true);
+      }
+      for(int i = 0; i < input; i++) {
+        for(int o = 0; o < output; o++) {
+          addConnection(i, inputNodes.size() + o, randomWeight(), true);
+        }
       }
     }
 
@@ -126,17 +143,14 @@ namespace Evolution {
       addConnection(-1, nodes.size() - 1, randomWeight(), true);
     }
 
-    void addNodeAtConnection(int connectionId) {
-      if(connections[connectionId].inId != -1) {
-        createHiddenNode();
-        int newNodeId = nodes.size() - 1;
-        connections[connectionId].enabled = false;
-        int inId = connections[connectionId].inId;
-        int outId = connections[connectionId].outId;
-        addConnection(inId, newNodeId, 1, true);
-        addConnection(newNodeId, outId, connections[connectionId].weight, true);
-      }
+    void sortConnections() {
+      std::sort(connections.rbegin(), connections.rend(),
+        [](auto const &a, auto const &b) { return a.innovNo < b.innovNo; });
     }
+
+    void addNodeAtConnection(int connectionId);
+
+    void addNodeAtConnection(int connectionId, HistoricalMarking *hm);
 
     void toggleConnection(int inId, int outId) {
       for(int i = 0; i < connections.size(); i++) {
@@ -153,44 +167,69 @@ namespace Evolution {
       int inId = rand() % (nodes.size());
       int outId = rand() % (nodes.size());
       bool conExists = connectionExists(inId, outId);
-      if(inId != outId) {
 
-        if(outId >= inputNodes.size() && !conExists) {
-          addConnection(inId, outId, randomWeight(), true);
-        } else if(conExists) {
-          toggleConnection(inId, outId);
-        }
+      if(outId >= inputNodes.size() && !conExists) {
+        addConnection(inId, outId, randomWeight(), true);
+      } else if(conExists) {
+        toggleConnection(inId, outId);
       }
     }
 
     double randomWeight() {
-      return ((double)rand() / RAND_MAX - 0.5) * 10;
+      return ((double)rand() / RAND_MAX - 0.5) * 5;
     }
+
+    bool historicalNodeMarkingExists(int conId);
+
+    HistoricalMarking *getHistoricalNodeMarking(int conId);
+
+    HistoricalMarking *getHistoricalMarking(int conId);
 
     void mutateAddNode() {
       if(connections.size() == 0) return;
       int conId = rand() % connections.size();
       if(connections[conId].enabled) {
-        addNodeAtConnection(conId);
+
+        // TODO: If HistoricalMarking exists, create connection and rename Ids
+        // Renaming causes Problems with array mapping. create hashmap which holds
+        // Further Mapping for array <-> Id
+        if(historicalNodeMarkingExists(conId)) {
+          addNodeAtConnection(conId, getHistoricalNodeMarking(conId));
+        } else {
+          addNodeAtConnection(conId);
+        }
+
       }
     }
 
     void mutateWeight() {
+
+      double p = (double)rand() / RAND_MAX;
+
       if(connections.size() == 0) return;
       int conId = rand() % (connections.size());
 
       if(connections[conId].enabled) {
-        connections[conId].weight = randomWeight();
+        if(p < 0.1) {
+          connections[conId].weight = randomWeight();
+        } else {
+          connections[conId].weight *= (((double)rand() / RAND_MAX)) * 2;
+        }
       }
     }
 
     void mutate() {
-      double p = (double)rand() / RAND_MAX;
-      if(p > 0.95) {
+      double p;
+      p = (double)rand() / RAND_MAX;
+      if(p < 0.03) {
         mutateAddNode();
-      } else if (p > 0.45) {
+      }
+      p = (double)rand() / RAND_MAX;
+      if(p < 0.05) {
         mutateConnection();
-      } else {
+      }
+      p = (double)rand() / RAND_MAX;
+      if(p < 0.8) {
         mutateWeight();
       }
     }

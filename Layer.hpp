@@ -123,7 +123,6 @@ namespace DNN {
       temporary_state = bias_weights.array() - 1000 * activityVector.array();
 
 
-      // std::cout << temporary_state.transpose() << std::endl;
 
 
       for(int layer_index = 0; layer_index < connecting_layers.size(); layer_index++) {
@@ -136,7 +135,9 @@ namespace DNN {
         // std::cout << *weight_matrix << std::endl;
         temporary_state += delta;
       }
-      temporary_state = temporary_state.unaryExpr(&thresholdFunction);
+      // temporary_state = temporary_state.unaryExpr(&thresholdFunction);
+      temporary_state = temporary_state.unaryExpr(&logisticFunction);
+      // std::cout << temporary_state.transpose() << std::endl;
       return temporary_state;
     }
 
