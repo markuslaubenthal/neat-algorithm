@@ -3,10 +3,12 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <map>
 #include "NetworkState.hpp"
 #include "ActivationFunction.hpp"
 #include "Layer.hpp"
 #include "GenoType.hpp"
+#include "GenoConnection.hpp"
 
 
 using Eigen::MatrixXd;
@@ -43,32 +45,61 @@ namespace DNN {
 
     Network(Evolution::GenoType genotype) {
       std::vector<Evolution::GenoConnection> connections = genotype.getConnections();
-      std::vector<Evolution::GenoNode *> nodes = genotype.getNodes();
-      std::vector<Evolution::GenoNode> inputNodes = genotype.getInputNodes();
-      std::vector<Evolution::GenoNode> outputNodes = genotype.getOutputNodes();
-      layer_dimensions = std::vector<int>();
-      layer_connections = std::vector<std::vector<int>>();
+      // std::vector<Evolution::GenoNode *> nodes = genotype.getNodes();
+      // std::vector<Evolution::GenoNode> inputNodes = genotype.getInputNodes();
+      // std::vector<Evolution::GenoNode> outputNodes = genotype.getOutputNodes();
 
-      for(int i = 0; i < nodes.size(); i++) {
-        layer_dimensions.push_back(1);
-        layers.push_back(new Layer(1, i));
-      }
+      // int sizeOfInputNodes = genotype.getSizeOfInputNodes();
+      // int sizeOfOutputNodes = genotype.getSizeOfOutputNodes();
+      // int sizeOfHiddenNodes = genotype.getSizeOfHiddenNodes();
+      //
+      // int totalNodes = sizeOfInputNodes + sizeOfOutputNodes + sizeOfHiddenNodes;
+
+      // for(int i = 0; i < nodes.size(); i++) {
+      //   layer_dimensions.push_back(1);
+      //   layers.push_back(new Layer(1, i));
+      // }
+
+      std::map<int, int> nodeIds;
+
       n_layers = layers.size();
 
       for(int i = 0; i < connections.size(); i++) {
+
+        createLayersIfNotExist(connections[i], &nodeIds, i);
         if(connections[i].enabled) {
+          int outId = nodeIds[connections[i].outId];
           double weight = connections[i].weight;
           if(connections[i].inId == -1) {
-            layers[connections[i].outId]->setBias(weight);
+            layers[outId]->setBias(weight);
           } else {
-            std::vector<int> connection = {connections[i].inId, connections[i].outId};
+            int inId = nodeIds[connections[i].inId];
+            std::vector<int> connection = {inId, outId};
             layer_connections.push_back(connection);
             MatrixXd weight_matrix = MatrixXd::Constant(1,1, weight);
-            layers[connections[i].outId]->connectLayer(layers[connections[i].inId], weight_matrix);
+            layers[outId]->connectLayer(layers[inId], weight_matrix);
           }
         }
       }
 
+    }
+
+    void createLayersIfNotExist(Evolution::GenoConnection con,
+      std::map<int, int> *nodeIds, int i) {
+
+      // If input is not Bias Neuron and it does not exist -> Add new Layer
+      if(con.inId != -1 && nodeIds->count(con.inId) == 0) {
+        (*nodeIds)[con.inId] = nodeIds->size();
+        layer_dimensions.push_back(1);
+        layers.push_back(new Layer(1, (*nodeIds)[con.inId]));
+      }
+
+      // If output Neuron does not exist -> Add new Layer
+      if(nodeIds->count(con.outId) == 0) {
+        (*nodeIds)[con.outId] = nodeIds->size();
+        layer_dimensions.push_back(1);
+        layers.push_back(new Layer(1, (*nodeIds)[con.outId]));
+      }
     }
 
     VectorXd getLayerState(int layer_index) {

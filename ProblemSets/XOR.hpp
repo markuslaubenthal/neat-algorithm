@@ -50,15 +50,8 @@ namespace ProblemSets {
       VectorXd expected_output = outputs[state];
       for(int i = 0; i < output.size(); i++) {
         if(i == 1) {
-          // std::cout << "Evaluation: " << std::endl;
-          // std::cout << (expected_output - output[i]) << std::endl;
-          // std::cout << "Norm: " << (expected_output - output[i]).norm() << std::endl;
           reward += 1 - (expected_output - output[i]).norm();
-          // std::cout << output[i] << std::endl;
         }
-        // if(i == 1 && !expected_output.isApprox(output[i])) {
-        //   reward -= 1;
-        // }
       }
 
       return reward;

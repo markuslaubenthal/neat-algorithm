@@ -16,7 +16,12 @@ namespace Evolution {
 
     std::string toString() {
       std::stringstream ss;
-      return "In:  " + std::to_string(inId) + "\n" + "Out: " + std::to_string(outId) + "\n" + "w:   " + std::to_string(weight);
+      std::string _enabled = enabled ? "1" : "0";
+      return   "State: " + _enabled +
+        "\n" + "Innov: " + std::to_string(innovNo) +
+        "\n" + "In:    " + std::to_string(inId) +
+        "\n" + "Out:   " + std::to_string(outId) +
+        "\n" + "w:     " + std::to_string(weight);
     }
 
   };
