@@ -132,12 +132,10 @@ namespace DNN {
         VectorXd input = layer->getState();
 
         MatrixXd delta = *weight_matrix * layer->getState();
-        // std::cout << *weight_matrix << std::endl;
         temporary_state += delta;
       }
       // temporary_state = temporary_state.unaryExpr(&thresholdFunction);
       temporary_state = temporary_state.unaryExpr(&logisticFunction);
-      // std::cout << temporary_state.transpose() << std::endl;
       return temporary_state;
     }
 

@@ -37,9 +37,6 @@ int main(int argc, char* argv[]) {
       input << 0,0;
     }
     network.feedforwardStep(input);
-    // network.printState();
-    // std::cout << network.getLayerState(15) <<std::endl;
-    // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
 
   auto time_end = std::chrono::steady_clock::now();

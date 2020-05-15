@@ -13,22 +13,24 @@ namespace Evolution {
   namespace Algorithm {
     namespace Neat {
       struct Species {
-        int numberOfWinners = 3;
-        int numberOfMutations = 10;
+        // int numberOfWinners = 3;
+        // int numberOfMutations = 10;
         std::vector<GenoType> genotypes;
         std::vector<DNN::Network> phenotypes;
         bool representativeSet = false;
-        GenoType representative;
+        Evolution::GenoType representative;
 
         double totalFitness = 0;
-        double bestFitness;
+        double bestFitness = 0;
         double timeSinceBestFitness = 0;
+
 
         void addGenoType(Evolution::GenoType genotype) {
           genotypes.push_back(genotype);
           if(!representativeSet) {
             representative = genotype;
             bestFitness = genotype.fitness;
+            std::cout << "Best: " << bestFitness << std::endl;
           }
         }
 
@@ -37,7 +39,7 @@ namespace Evolution {
         }
 
         void clear() {
-          genotypes = std::vector<GenoType>();
+          genotypes.clear();
         }
 
         int size() {
@@ -46,23 +48,6 @@ namespace Evolution {
 
         GenoType getRepresentativeGenotype() {
           return representative;
-        }
-
-        std::vector<GenoType> mutate() {
-          std::vector<GenoType> selection = selectHighestFitness();
-          Species sp;
-          std::vector<GenoType> new_genotypes;
-
-          for(int i = 0; i < selection.size(); i++) {
-            std::vector<GenoType> mutations(numberOfMutations + 1, selection[i]);
-
-            //Leave a copy of the original genotype in the species
-            for(int k = 1; k < mutations.size(); k++) {
-              mutations[k].mutate();
-              new_genotypes.push_back(mutations[k]);
-            }
-          }
-          return new_genotypes;
         }
 
 
@@ -86,29 +71,37 @@ namespace Evolution {
           return selection;
         }
 
-        std::vector<GenoType> selectHighestFitness() {
+        GenoType *selectHighestFitness() {
           std::sort(genotypes.rbegin(), genotypes.rend(),
             [](auto const &a, auto const &b) { return a.fitness < b.fitness; });
 
           if(genotypes[0].fitness > bestFitness) {
+            std::cout << "Fitness: " << genotypes[0].fitness << std::endl;
             bestFitness = genotypes[0].fitness;
             timeSinceBestFitness = 0;
           } else {
             timeSinceBestFitness++;
           }
-          genotypes.resize(std::max(1, (int)(genotypes.size() / 2)));
+
+          genotypes.resize((int)(genotypes.size() / 2));
 
           if(genotypes.size() > 0) {
             representative = genotypes[rand() % genotypes.size()];
-          }
+          } else return NULL;
 
           totalFitness = 0;
           for(int i = 0; i < genotypes.size(); i++) {
             totalFitness += genotypes[i].fitness;
           }
 
-          std::cout << "Highest Fitness: " << genotypes[0].fitness << std::endl;
-          return genotypes;
+          // std::cout << "Highest Fitness: " << genotypes[0].fitness << std::endl;
+          GenoType *ret;
+          if(genotypes.size() > 0) {
+            ret = &genotypes[0];
+          } else {
+            ret = NULL;
+          }
+          return ret;
         }
 
 
@@ -124,7 +117,7 @@ namespace Evolution {
         int numberInputNodes;
         int numberOutputNodes;
 
-        std::vector<HistoricalMarking> markingHistory;
+        MarkingHistory markingHistory;
 
       public:
         Neat(int inputNodes, int outputNodes) {
@@ -177,7 +170,7 @@ namespace Evolution {
           }
 
           double c1, c2, c3;
-          c1 = .001;
+          c1 = 1;
           c2 = 1;
           c3 = 0.4;
           double N = 1;
@@ -255,6 +248,7 @@ namespace Evolution {
           VectorXd globalOutput(4);
 
           for(int epoch = 0; epoch < 1000; epoch++) {
+            markingHistory.clear();
 
             for(int genoIndex = 0; genoIndex < population.size(); genoIndex++) {
               double fitness = 0;
@@ -265,7 +259,7 @@ namespace Evolution {
                 std::vector<VectorXd> outputs;
                 std::vector<int> outputIdRange =
                   population[genoIndex].getOutputIdRange();
-                VectorXd output(population[genoIndex].outputNodes.size());
+                VectorXd output(population[genoIndex].getSizeOfOutputNodes());
 
                 for(int k = 0; k < 3; k++) {
                   phenotype.feedforwardStep(input);
@@ -284,14 +278,6 @@ namespace Evolution {
               }
 
               population[genoIndex].fitness = fitness;
-
-
-              // if(fitness > -1.0002) {
-              //   std::cout << "OUTPUT: " << std::endl;
-              //   std::cout << globalOutput.transpose() << std::endl;
-              // }
-
-
             }
 
             // Selection
@@ -300,10 +286,11 @@ namespace Evolution {
             std::vector<GenoType> newPopulation;
 
             double speciesTotalFitness = 0;
+            std::cout << "Species: " << species.size() << std::endl;
             for(int i = 0; i < species.size(); i++) {
-              std::vector<GenoType> selection = species[i].selectHighestFitness();
-              if(species[i].size() > 0) {
-                newPopulation.insert(newPopulation.begin(), selection.begin(), selection.end());
+              GenoType *winner = species[i].selectHighestFitness();
+              if(winner != NULL) {
+                newPopulation.push_back(*winner);
                 speciesTotalFitness += species[i].totalFitness;
               } else {
                 species.erase(species.begin() + i);
@@ -312,24 +299,60 @@ namespace Evolution {
             }
 
             population = newPopulation;
-            std::cout << population.size() << std::endl;
+
+
 
             std::sort(species.rbegin(), species.rend(),
               [](auto const &a, auto const &b) { return a.totalFitness < b.totalFitness; });
 
             for(int i = population.size(); i < populationSize; i++) {
               // Random Breed
-              double fitnessSelector = (double)rand() / RAND_MAX * speciesTotalFitness;
-              double fitness = 0;
+              int fitnessSelector = randomInteger(0, (int)speciesTotalFitness);
+              int fitness = 0;
+              int popFound = false;
               for(int speciesIndex = 0; speciesIndex < species.size(); speciesIndex++) {
                 fitness += species[speciesIndex].totalFitness;
-                if(fitnessSelector * 2 >= fitness) {
+                if(fitnessSelector <= fitness) {
                   population.push_back(species[speciesIndex].breed());
+                  popFound = true;
                 }
               }
             }
             // Epoch End
           }
+        }
+
+        void fit2() {
+          std::cout << "init" << std::endl;
+          init(1);
+
+          markingHistory.clear();
+
+          speciate(population);
+
+          GenoType g1 = population[0];
+          GenoType g2 = *(new GenoType(g1));
+
+          std::cout << "add Nodes" << std::endl;
+          g1.addNode(1);
+          g2.addNode(1);
+
+
+          // if(g1.isEqual(g2)) {
+          //   std::cout << "Equal!" << std::endl;
+          // }
+
+          std::cout << "add connections" << std::endl;
+          g1.addConnection(1, 2, 1.0, true, true);
+          g2.addConnection(1, 2, 1.0, true, true);
+
+          // std::cout << g1.toString() << std::endl;
+          // std::cout << g2.toString() << std::endl;
+
+          // if(g1.isEqual(g2)) {
+          //   std::cout << "Equal!" << std::endl;
+          // }
+
         }
       };
     }
