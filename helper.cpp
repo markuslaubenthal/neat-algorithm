@@ -1,6 +1,7 @@
 #include "helper.hpp"
 
 int randomInteger(int min, int max) {
+  if(min == max) return min;
   return rand() % (max - min) + min;
 }
 
