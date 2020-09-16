@@ -42,7 +42,7 @@ namespace ProblemSets {
 
     VectorXd getInput(int t) {
       state = t % 4;
-      return inputs[state];
+      return inputs[t % 4];
     }
 
     double evaluate(std::vector<VectorXd> output) {
