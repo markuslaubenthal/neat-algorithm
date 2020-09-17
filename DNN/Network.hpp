@@ -65,8 +65,6 @@ namespace DNN {
 
       std::map<int, int> nodeIds;
 
-
-
       for(int i = 0; i < connections.size(); i++) {
 
         createLayersIfNotExist(connections[i], &nodeIds, i);
@@ -87,6 +85,34 @@ namespace DNN {
       n_layers = layers.size();
 
     }
+
+    ~Network() {
+      for (auto p : layers) {
+        delete p;
+      }
+      layers.clear();
+    }
+
+    // void generateWeightMatrix() {
+    //   int numberOfNeurons = 0;
+    //   for(int i = 0; i < layers.size(); i++) {
+    //     numberOfNeurons += layers[i]->getSize();
+    //   }
+    //   MatrixXd weightMatrix = MatrixXd::Zero(numberOfNeurons, numberOfNeurons);
+    //   int offset = 0;
+    //   for(int i = 0; i < layers.size(); i++) {
+    //
+    //     std::vector<MatrixXd> weight_matrices = layers[i].getWeights();
+    //     int matrixSize = 0;
+    //     for(int wIndex = 0; wIndex < weight_matrices.size(); wIndex++) {
+    //       matrixSize += weight_matrices[wIndex].rows();
+    //     }
+    //     int layerSize = layers[i]->getSize();
+    //     weightMatrix.block<layerSize,layerSize>(offset, offset) =
+    //       layers[i]->
+    //
+    //   }
+    // }
 
     int getNoOfLayers() {
       return n_layers;

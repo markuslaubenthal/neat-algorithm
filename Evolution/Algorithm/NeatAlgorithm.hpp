@@ -286,7 +286,6 @@ namespace Evolution {
            * Calculate the shared fitness
            */
           if(species.size() == 0) {
-            std::cout << "WUH" << std::endl;
             init(population[0]);
           } else {
             double totalFitness = shareFitness();
@@ -304,24 +303,22 @@ namespace Evolution {
 
             double bestFitness = -1000;
             GenoType best;
-            double avgNoOfLayers = 0;
             for(int i = 0; i < population.size(); i++) {
 
               DNN::Network network(population[i]);
-              avgNoOfLayers += network.getNoOfLayers();
 
               if(population[i].fitness > bestFitness) {
                 bestFitness = population[i].fitness;
                 best = population[i];
               }
             }
-            avgNoOfLayers = avgNoOfLayers / (double)population.size();
+            // avgNoOfLayers = avgNoOfLayers / (double)population.size();
             std::cout << "Maximum Fitness: " << bestFitness << std::endl;
-            std::cout << "Number of Species: " << species.size() << std::endl;
-            std::cout << "Population Size: " << population.size() << std::endl;
-            std::cout << "Average Layers: " << avgNoOfLayers << std::endl;
-            std::cout << std::endl;
-            Visualization::Graph::write(best, "best.graph");
+            // std::cout << "Number of Species: " << species.size() << std::endl;
+            // std::cout << "Population Size: " << population.size() << std::endl;
+            // std::cout << "Average Layers: " << avgNoOfLayers << std::endl;
+            // std::cout << std::endl;
+            // Visualization::Graph::write(best, "best.graph");
           }
 
         }

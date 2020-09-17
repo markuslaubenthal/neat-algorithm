@@ -146,9 +146,6 @@ void Evolution::GenoType::sortConnections() {
 }
 
 void Evolution::GenoType::toggleConnection(int inId, int outId) {
-  if(inId == -1) {
-    std::cout << "------------------------------------------------" << std::endl;
-  }
   for(int i = 0; i < connections.size(); i++) {
     if(connections[i].inId == inId && connections[i].outId == outId) {
       connections[i].enabled = !connections[i].enabled;
@@ -158,10 +155,7 @@ void Evolution::GenoType::toggleConnection(int inId, int outId) {
 }
 
 int Evolution::GenoType::getRandomNonInputId() {
-  // std::map<int,int>::iterator it = nodeIdMap.begin();
-  // std::advance(it, randomInteger(inputNodes, nodeIdMap.size()));
   return randomInteger(inputNodes, nodeIds.size());
-  // return it->second;
 }
 
 void Evolution::GenoType::mutateConnection() {
@@ -229,10 +223,6 @@ void Evolution::GenoType::randomizeWeights() {
 }
 
 void Evolution::GenoType::mutateWeights() {
-
-
-  // if(connections.size() == 0) return;
-  // int conId = randomInteger(0, connections.size());
 
   for(int i = 0; i < connections.size(); i++) {
     // if(connections[i].enabled) {
