@@ -9,6 +9,8 @@
 #include "../../DNN/Network.hpp"
 #include "../../Evaluation/EvaluationStrategy.hpp"
 #include "../../Visualization/Graph.hpp"
+#include "../../DNN/SingleLayerNetwork.hpp"
+#include "../../DNN/NetworkFactory.hpp"
 
 namespace Evolution {
   namespace Algorithm {
@@ -305,15 +307,13 @@ namespace Evolution {
             GenoType best;
             for(int i = 0; i < population.size(); i++) {
 
-              DNN::Network network(population[i]);
-
               if(population[i].fitness > bestFitness) {
                 bestFitness = population[i].fitness;
                 best = population[i];
               }
             }
             // avgNoOfLayers = avgNoOfLayers / (double)population.size();
-            std::cout << "Maximum Fitness: " << bestFitness << std::endl;
+            // std::cout << "Maximum Fitness: " << bestFitness << std::endl;
             // std::cout << "Number of Species: " << species.size() << std::endl;
             // std::cout << "Population Size: " << population.size() << std::endl;
             // std::cout << "Average Layers: " << avgNoOfLayers << std::endl;

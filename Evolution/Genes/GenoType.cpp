@@ -8,6 +8,9 @@ int Evolution::GenoType::getSizeOfInputNodes() {
 int Evolution::GenoType::getSizeOfOutputNodes() {
   return outputNodes;
 }
+int Evolution::GenoType::getSizeOfHiddenNodes() {
+  return hiddenNodes;
+}
 
 void Evolution::GenoType::addConnection(int inId, int outId, double weight, bool enabled, bool createHistoricalMarking) {
 
@@ -33,9 +36,6 @@ void Evolution::GenoType::addNodeAtConnection(int conId) {
 
     int newNodeId = *innovNo;
     (*innovNo)++;
-    if((*innovNo) < 20) {
-      std::cout << "overflow" << std::endl;
-    }
     nodeIds.push_back(newNodeId);
     hiddenNodes++;
 
