@@ -63,6 +63,10 @@ namespace DNN {
       bias_weights = MatrixXd::Constant(size, 1, weight);
     }
 
+    void setBias(MatrixXd bias) {
+      bias_weights = bias;
+    }
+
     VectorXd getState() const {
       return state;
     }

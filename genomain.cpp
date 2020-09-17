@@ -13,13 +13,17 @@
 
 #include "DNN/Network.hpp"
 
+
+
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
 int main(int argc, char* argv[]) {
   std::srand(time(0));
 
-  for(int k = 0; k < 1; k++) {
+  auto time_start = std::chrono::steady_clock::now();
+
+  for(int k = 0; k < 3; k++) {
     Evolution::Algorithm::Neat::Neat neat(2,1);
     neat.setEvaluationStrategy(new Evaluation::XOREvaluation());
     neat.init(150);
@@ -28,6 +32,9 @@ int main(int argc, char* argv[]) {
       neat.epoch();
     }
   }
+  auto time_end = std::chrono::steady_clock::now();
+  std::cout << "Calculation finished in: " << std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_start).count() << " ms" << std::endl;
+
 
   return 0;
 }

@@ -21,21 +21,19 @@ using Eigen::VectorXd;
 
 namespace DNN {
   class Network {
-  private:
-    std::vector<std::vector<MatrixXd>> weights;
-    std::vector<int> layer_dimensions;
+  protected:
+    // std::vector<int> layer_dimensions;
     std::vector<std::vector<int>> layer_connections;
-    int n_layers;
     NetworkState state;
 
     std::vector<Layer *> layers;
 
-
+    Network() {}
   public:
     Network(const std::vector<int> layer_dimensions, std::vector<std::vector<int>> layer_connections) :
-      layer_dimensions(layer_dimensions),
+      // layer_dimensions(layer_dimensions),
       layer_connections(layer_connections) {
-        n_layers = layer_dimensions.size();
+        int n_layers = layer_dimensions.size();
         for(int layer_index = 0; layer_index < n_layers; layer_index++) {
           layers.push_back(new Layer(layer_dimensions[layer_index], layer_index));
         }
@@ -82,7 +80,6 @@ namespace DNN {
           }
         }
       }
-      n_layers = layers.size();
 
     }
 
@@ -115,7 +112,7 @@ namespace DNN {
     // }
 
     int getNoOfLayers() {
-      return n_layers;
+      return layers.size();
     }
 
     void createLayersIfNotExist(Evolution::GenoConnection con,
@@ -124,7 +121,7 @@ namespace DNN {
       // If input is not Bias Neuron and it does not exist -> Add new Layer
       if(con.inId != -1 && nodeIds->count(con.inId) == 0) {
         (*nodeIds)[con.inId] = nodeIds->size();
-        layer_dimensions.push_back(1);
+        // layer_dimensions.push_back(1);
 
         //maybe wrong, maybe i need inId/outId respectively as Layer ID
         layers.push_back(new Layer(1, con.inId));
@@ -133,7 +130,7 @@ namespace DNN {
       // If output Neuron does not exist -> Add new Layer
       if(nodeIds->count(con.outId) == 0) {
         (*nodeIds)[con.outId] = nodeIds->size();
-        layer_dimensions.push_back(1);
+        // layer_dimensions.push_back(1);
         layers.push_back(new Layer(1, con.outId));
       }
     }
@@ -161,7 +158,7 @@ namespace DNN {
       return NULL;
     }
 
-    void setInputNodes(VectorXd input) {
+    virtual void setInputNodes(VectorXd input) {
       if(layers[0]->getSize() == input.size()) {
         layers[0]->setState(input);
       } else {
@@ -174,23 +171,23 @@ namespace DNN {
 
     void feedforwardStep(VectorXd input) {
       setInputNodes(input);
-      for(int layer_index = 0; layer_index < n_layers; layer_index++) {
+      for(int layer_index = 0; layer_index < layers.size(); layer_index++) {
         layers[layer_index]->step();
       }
-      for(int layer_index = 0; layer_index < n_layers; layer_index++) {
+      for(int layer_index = 0; layer_index < layers.size(); layer_index++) {
         layers[layer_index]->update();
       }
     }
 
     void printState() {
-      for(int layer_index = 0; layer_index < n_layers; layer_index++) {
+      for(int layer_index = 0; layer_index < layers.size(); layer_index++) {
         std::cout << "Layer " << layers[layer_index]->getId() << ":" << std::endl <<
           *layers[layer_index] << std::endl;
       }
     }
 
     void printWeights() {
-      for(int layer_index = 0; layer_index < n_layers; layer_index++) {
+      for(int layer_index = 0; layer_index < layers.size(); layer_index++) {
         std::cout << "Layer " << layers[layer_index]->getId() << ":" << std::endl;
         std::vector<MatrixXd> weights = layers[layer_index]->getWeights();
         for(int weight_index = 0; weight_index < weights.size(); weight_index++) {

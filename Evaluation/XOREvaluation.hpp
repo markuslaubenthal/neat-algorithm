@@ -6,6 +6,8 @@
 #include "../Evolution/Genes/GenoType.hpp"
 #include "EvaluationStrategy.hpp"
 #include "../DNN/Network.hpp"
+#include "../DNN/SingleLayerNetwork.hpp"
+#include "../DNN/NetworkFactory.hpp"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -52,7 +54,10 @@ namespace Evaluation {
         for(int t = 0; t < 4; t++) {
           // std::cout << "INPUT: " << std::endl;
           // std::cout << getInput(t).transpose() << std::endl << std::endl;
-          DNN::Network network(*genotype);
+          // DNN::Network network(*genotype);
+          DNN::SingleLayerNetwork network =
+            DNN::NetworkFactory::createSingleLayerQuadratic(*genotype);
+
           VectorXd input = getInput(t);
           VectorXd expectedOutput = getOutput(t);
           std::vector<int> outputIdRange =
@@ -60,11 +65,14 @@ namespace Evaluation {
 
           for(int i = 0; i < 8; i++) {
             network.feedforwardStep(input);
+
             // network.printState();
             if(i > 6) {
               int outputNeuron = outputIdRange[0];
-              // std::cout << "Measure: " << network.getLayerStateById(outputNeuron) << std::endl;
-              double difference = std::abs(network.getLayerStateById(outputNeuron)(0) - expectedOutput[0]);
+              // std::cout << "Output: " << network.getLayerStateById(0).coeff(outputNeuron, 0) << std::endl;
+              double difference = std::abs(
+                network.getLayerStateById(0).coeff(outputNeuron, 0) - expectedOutput[0]);
+              // double difference = std::abs(network.getLayerStateById(outputNeuron)(0) - expectedOutput[0]);
               error -= difference;
             }
           }

@@ -50,6 +50,7 @@ namespace Evolution {
 
     int getSizeOfInputNodes();
     int getSizeOfOutputNodes();
+    int getSizeOfHiddenNodes();
 
     int getRandomNonInputId();
 
