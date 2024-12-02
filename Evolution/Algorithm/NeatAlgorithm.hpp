@@ -141,7 +141,7 @@ namespace Evolution {
           this->populationSize = populationSize;
 
           Evolution::GenoType initialGenoType(innovPtr, &markingHistory);
-          initialGenoType.setInputAndOutputNodes(numberInputNodes, numberOutputNodes);
+          initialGenoType.initNodes(numberInputNodes, numberOutputNodes);
           // initialGenoType.addNodeAtConnection(1);
           //
           // initialGenoType.addConnection(1,6, 10, true);
@@ -238,11 +238,20 @@ namespace Evolution {
         std::vector<GenoType> generateOffsprings(double totalFitness) {
           std::vector<GenoType> newPopulation;
           for(int sIndex = 0; sIndex < species.size(); sIndex++) {
-            double numberOfOffsprings =
+            int numberOfOffsprings =
               populationSize * (species[sIndex].totalSharedFitness / totalFitness);
+            int numberOfMutations = numberOfOffsprings * 0.25;
 
-            for(int counter = 0; counter < numberOfOffsprings; counter++) {
-              newPopulation.push_back(species[sIndex].breed());
+            for(int counter = 0; counter <= numberOfOffsprings; counter++) {
+              if(counter < numberOfMutations) {
+                newPopulation.push_back(species[sIndex].breed());
+              } else {
+                newPopulation.push_back(species[sIndex].mate(
+                  species[sIndex].genotypes[rand() % species[sIndex].size()],
+                  species[sIndex].genotypes[rand() % species[sIndex].size()]
+                ));
+              }
+
             }
           }
           return newPopulation;
@@ -313,12 +322,12 @@ namespace Evolution {
               }
             }
             // avgNoOfLayers = avgNoOfLayers / (double)population.size();
-            // std::cout << "Maximum Fitness: " << bestFitness << std::endl;
-            // std::cout << "Number of Species: " << species.size() << std::endl;
-            // std::cout << "Population Size: " << population.size() << std::endl;
+            std::cout << "Maximum Fitness: " << bestFitness << std::endl;
+            std::cout << "Number of Species: " << species.size() << std::endl;
+            std::cout << "Population Size: " << population.size() << std::endl;
             // std::cout << "Average Layers: " << avgNoOfLayers << std::endl;
-            // std::cout << std::endl;
-            // Visualization::Graph::write(best, "best.graph");
+            std::cout << std::endl;
+            Visualization::Graph::write(best, "best.graph");
           }
 
         }

@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
   int innovNo = 0;
   Evolution::MarkingHistory *hist = new Evolution::MarkingHistory();
   Evolution::GenoType g(&innovNo, hist);
-  g.setInputAndOutputNodes(2,1);
+  g.initNodes(2,1);
 
   Visualization::Graph::write(g, "xor01.graph");
   g.mutateAddNode();

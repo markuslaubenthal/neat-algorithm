@@ -1,17 +1,25 @@
 #ifndef __EVOLUTION_GENOCONNECTION__
 #define __EVOLUTION_GENOCONNECTION__
 
+#include "Node.hpp"
+#include "NodeContainer.hpp"
+
 namespace Evolution {
   struct GenoConnection {
     int inId;
     int outId;
+    Evolution::Genes::Node inNode;
+    Evolution::Genes::Node outNode;
     double weight;
     bool enabled;
     int innovNo;
 
 
+    // GenoConnection(int inId, int outId, double weight, bool enabled, int innovNo) :
+    //   inId(inId), outId(outId), weight(weight), enabled(enabled), innovNo(innovNo) {
+    // }
     GenoConnection(int inId, int outId, double weight, bool enabled, int innovNo) :
-      inId(inId), outId(outId), weight(weight), enabled(enabled), innovNo(innovNo) {
+      inNode(inNode), outNode(outNode), weight(weight), enabled(enabled), innovNo(innovNo) {
     }
 
     std::string toString() {

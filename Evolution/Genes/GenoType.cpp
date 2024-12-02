@@ -2,14 +2,31 @@
 #include <iostream>
 #include <algorithm>
 
+// Evolution::GenoType(std::vector<GenoConnection> connections) :
+//   connections(connections) {
+//
+// }
+
 int Evolution::GenoType::getSizeOfInputNodes() {
-  return inputNodes;
+  return nodeContainer.inputSize();
 }
 int Evolution::GenoType::getSizeOfOutputNodes() {
-  return outputNodes;
+  return nodeContainer.outputSize();
 }
 int Evolution::GenoType::getSizeOfHiddenNodes() {
-  return hiddenNodes;
+  return nodeContainer.hiddenSize();
+}
+
+int* Evolution::GenoType::getInnovNo() {
+  return innovNo;
+}
+
+// std::vector<int> Evolution::GenoType::getNodeIds() {
+//   return nodeIds;
+// }
+
+Evolution::MarkingHistory* Evolution::GenoType::getMarkingHistory() {
+  return markingHistory;
 }
 
 void Evolution::GenoType::addConnection(int inId, int outId, double weight, bool enabled, bool createHistoricalMarking) {
@@ -36,8 +53,7 @@ void Evolution::GenoType::addNodeAtConnection(int conId) {
 
     int newNodeId = *innovNo;
     (*innovNo)++;
-    nodeIds.push_back(newNodeId);
-    hiddenNodes++;
+    nodeContainer.insertHiddenNode(newNodeId);
 
     connections[conId].enabled = false;
     int inId = connections[conId].inId;
@@ -56,7 +72,6 @@ void Evolution::GenoType::addNodeAtConnection(int conId) {
 }
 
 void Evolution::GenoType::addNodeAtConnection(int connectionId, HistoricalMarking *hm) {
-  hiddenNodes++;
   std::vector<GenoConnection> hmConnections = hm->getConnections();
 
   int newNodeId = hmConnections[0].outId;
@@ -67,13 +82,13 @@ void Evolution::GenoType::addNodeAtConnection(int connectionId, HistoricalMarkin
   // }
 
   bool nodeExists = false;
-  for(int i = 0; i < nodeIds.size(); i++) {
-    if(nodeIds[i] == newNodeId){
+  for(int i = 0; i < nodeContainer.size(); i++) {
+    if(nodeContainer[i] == newNodeId){
       nodeExists = true;
       break;
     }
   }
-  if(!nodeExists) nodeIds.push_back(newNodeId);
+  if(!nodeExists) nodeContainer.insertHiddenNode(newNodeId);
 
   connections[connectionId].enabled = false;
   connections.insert(connections.begin(), hmConnections.begin(), hmConnections.end());
@@ -81,7 +96,7 @@ void Evolution::GenoType::addNodeAtConnection(int connectionId, HistoricalMarkin
 }
 
 std::string Evolution::GenoType::toString(bool disabled) {
-  int totalNodes = inputNodes + outputNodes + hiddenNodes;
+  int totalNodes = nodeContainer.size();
   std::string line1 = "Number of Nodes: " + std::to_string(totalNodes);
   std::string s_connections = "";
   for(int i = 0; i < connections.size(); i++) {
@@ -111,26 +126,35 @@ std::vector<Evolution::GenoConnection> Evolution::GenoType::getConnections() {
   return connections;
 }
 
-void Evolution::GenoType::setInputAndOutputNodes(int input, int output) {
-  inputNodes = input;
-  outputNodes = output;
-  hiddenNodes = 0;
+void Evolution::GenoType::initNodes(int input, int output) {
+  iNodes.clear();
+  oNodes.clear();
+  hNodes.clear();
 
-  nodeIdMap.clear();
-  for(int i = 0; i < input + output; i++) {
-    nodeIdMap[*innovNo] = i;
-    nodeIds.push_back(*innovNo);
+  nodeContainer = Evolution::Genes::NodeContainer();
+
+  int noOfNodes = input + output;
+  for(int i = 0; i < noOfNodes; i++) {
+    if(i < input) nodeContainer.insertInputNode(innovno);
+    else nodeContainer.insertOutputNode(innovno);
     (*innovNo)++;
   }
 
   connections.clear();
 
-  for(int onode = 0; onode < outputNodes; onode++) {
-    addConnection(-1, onode + inputNodes, randomWeight(), true);
-    for(int inode = 0; inode < inputNodes; inode++) {
-      addConnection(inode, onode + inputNodes, randomWeight(), true);
+  for(auto outIterator : nodeContainer.getOutputNodes()) {
+    addConnection(-1, onode + input, randomWeight(), true);
+    for(auto inIterator : nodeContainer.getInputNodes()) {
+      addConnection((*inTerator).nodeId, (*outIterator).nodeId);
     }
   }
+
+  // for(int onode = 0; onode < output; onode++) {
+  //   addConnection(-1, onode + input, randomWeight(), true);
+  //   for(int inode = 0; inode < output; inode++) {
+  //     addConnection(inode, onode + input, randomWeight(), true);
+  //   }
+  // }
 }
 
 bool Evolution::GenoType::connectionExists(int inId, int outId) {
@@ -154,21 +178,20 @@ void Evolution::GenoType::toggleConnection(int inId, int outId) {
   }
 }
 
-int Evolution::GenoType::getRandomNonInputId() {
-  return randomInteger(inputNodes, nodeIds.size());
-}
+// int Evolution::GenoType::getRandomNonInputId() {
+//   return randomInteger(inputNodes, nodeIds.size());
+// }
 
 void Evolution::GenoType::mutateConnection() {
   // Add Random connection
-  int numberNonMutatableNodes = inputNodes + outputNodes;
+  int numberOfNonInputNodes =
+    nodeContainer.outputSize() +
+    nodeContainer.outputSize();
+  int numberOfNodes = nodeContainer.size();
 
-  int inId = randomInteger(0, nodeIds.size());
-  inId = nodeIds[inId];
-  // int outId = randomInteger(0, nodeIdMap.size());
-  int outId = getRandomNonInputId();
-  outId = nodeIds[outId];
+  int inId = nodeContainer.getRandomNodeId();
+  int outId = nodeContainer.getRandomNonInputNodeId();
   bool conExists = connectionExists(inId, outId);
-
 
   if(inId != outId) {
     if(!conExists) {
@@ -255,9 +278,15 @@ void Evolution::GenoType::mutate() {
 
 std::vector<int> Evolution::GenoType::getOutputIdRange() {
   std::vector<int> idRange;
-  idRange.push_back(inputNodes);
-  idRange.push_back(inputNodes + outputNodes);
+  std::set<Evolution::Genes::Node> outputNodes = nodeContainer.getOutputNodes();
+  for(auto it : outputNodes) {
+    idRange.push_back((*it).nodeId);
+  }
   return idRange;
+}
+
+std::set<Evolution::Genes::Node> getOutputNodes() {
+  return nodeContainer.getOutputNodes();
 }
 
 

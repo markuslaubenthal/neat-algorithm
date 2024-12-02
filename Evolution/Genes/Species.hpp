@@ -46,24 +46,72 @@ namespace Evolution {
 
 
       GenoType breed() {
-        // if(totalFitness > 0) {
-        //   double random = (double)rand() / RAND_MAX * totalFitness;
-        //
-        //
-        //   double fitness = 0;
-        //   for(int i = 0; i < genotypes.size(); i++) {
-        //     fitness += genotypes[i].fitness;
-        //     if(fitness * 2 >= random) {
-        //       GenoType selection = genotypes[i];
-        //       selection.mutate();
-        //       return selection;
-        //     }
-        //   }
-        // }
-
         GenoType selection = genotypes[rand() % genotypes.size()];
         selection.mutate();
         return selection;
+      }
+
+      Evolution::GenoType mate(Evolution::GenoType a, Evolution::GenoType b) {
+        int i = 0, k = 0;
+        std::vector<Evolution::GenoConnection> connections;
+        std::vector<int> nodeIds = a.getNodeIds();
+        std::vector<int> bNodeIds = b.getNodeIds();
+        nodeIds.insert( nodeIds.end(), bNodeIds.begin(), bNodeIds.end() );
+        removeDuplicates(nodeIds);
+
+        while(i < a.connections.size() && k < b.connections.size()) {
+          int a_innov = a.connections[i].innovNo;
+          int b_innov = b.connections[k].innovNo;
+          Evolution::GenoConnection* ab[] = {&a.connections[i], &b.connections[k]};
+
+          if(a_innov == b_innov) {
+            bool enabled = true;
+            if(!ab[0]->enabled || !ab[1]->enabled) {
+              int r = randomDouble(0,1);
+              if(r > 0.25) {
+                enabled = false;
+              }
+            }
+            int r = rand() % 2;
+            connections.push_back(*ab[r]);
+            connections.back().enabled = enabled;
+            i++;
+            k++;
+          } else {
+            int selectionId = (a_innov < b_innov ? 0 : 1);
+            bool select = false;
+            if(a.fitness == b.fitness) {
+              select = (bool) rand() % 2;
+              // If Selected fitness > other fitness
+            } else if(selectionId == 0 && a.fitness > b.fitness ||
+                      selectionId == 1 && b.fitness > a.fitness) {
+              select = true;
+            }
+            if(select) {
+              connections.push_back(*ab[selectionId]);
+            }
+            // connections.push_back(*ab[selectionId]);
+            if(a_innov < b_innov) i++;
+            else k++;
+          }
+        }
+        if(i < a.connections.size() && a.fitness >= b.fitness) {
+          connections.insert(connections.end(), a.connections.begin() + i, a.connections.end());
+        }
+        if(k < b.connections.size() && b.fitness >= a.fitness) {
+          connections.insert(connections.end(), b.connections.begin() + i, b.connections.end());
+        }
+
+        Evolution::GenoType genotype(
+          a.getInnovNo(),
+          a.getMarkingHistory(),
+          connections,
+          nodeIds,
+          a.getSizeOfInputNodes(),
+          a.getSizeOfOutputNodes()
+        );
+        genotype.mutate();
+        return genotype;
       }
 
       void setRandomRepresentative() {

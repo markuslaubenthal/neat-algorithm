@@ -5,11 +5,14 @@
 #include <sstream>
 #include <vector>
 #include <map>
+#include <set>
 #include <iterator>
 
 #include "MarkingHistory.hpp"
 #include "HistoricalMarking.hpp"
 #include "GenoConnection.hpp"
+#include "Node.hpp"
+#include "NodeContainer.hpp"
 #include "../../helper.hpp"
 
 using Eigen::MatrixXd;
@@ -23,14 +26,15 @@ namespace Evolution {
     MarkingHistory *markingHistory;
     int *innovNo;
 
-    int inputNodes = 0;
-    int outputNodes = 0;
-    int hiddenNodes = 0;
+    std::set<Evolution::Genes::Node> iNodes;
+    std::set<Evolution::Genes::Node> oNodes;
+    std::set<Evolution::Genes::Node> hNodes;
 
     std::map<int, int> nodeIdMap;
     std::vector<int> nodeIds;
+    Evolution::Genes::NodeContainer nodeContainer;
 
-    public:
+  public:
     std::vector<GenoConnection> connections;
     double fitness = 0;
     double sharedFitness = 0;
@@ -42,6 +46,18 @@ namespace Evolution {
       connections = std::vector<GenoConnection>();
     }
 
+    // TODO nur noch Nodes übergeben. Anzahl ignorieren
+    GenoType(int *innovNo, MarkingHistory *markingHistory,
+      std::vector<GenoConnection> connections,
+      std::set<Evolution::Genes::Node> inputNodes,
+      std::set<Evolution::Genes::Node> outputNodes,
+      std::set<Evolution::Genes::Node> hiddenNodes
+    ) : innovNo(innovNo), markingHistory(markingHistory), connections(connections) {
+      nodeContainer.setHiddenNodes(hiddenNodes);
+      nodeContainer.setInputNodes(inputNodes);
+      nodeContainer.setOutputNodes(outputNodes);
+    }
+
     GenoType(std::vector<GenoConnection> connections) : connections(connections) {}
 
     ~GenoType() {}
@@ -51,6 +67,9 @@ namespace Evolution {
     int getSizeOfInputNodes();
     int getSizeOfOutputNodes();
     int getSizeOfHiddenNodes();
+    int *getInnovNo();
+    std::vector<int> getNodeIds();
+    Evolution::MarkingHistory *getMarkingHistory();
 
     int getRandomNonInputId();
 
@@ -60,7 +79,7 @@ namespace Evolution {
 
     void setConnection(int inId, int outId, bool enabled, double weight);
 
-    void setInputAndOutputNodes(int input, int output);
+    void initNodes(int input, int output);
 
     bool connectionExists(int inId, int outId);
 

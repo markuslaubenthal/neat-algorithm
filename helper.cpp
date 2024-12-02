@@ -19,3 +19,12 @@ bool replaceInString(std::string& str, const std::string& from, const std::strin
   }
   return true;
 }
+
+void removeDuplicates(std::vector<int> &v) {
+	auto end = v.end();
+	for (auto it = v.begin(); it != end; ++it) {
+		end = std::remove(it + 1, end, *it);
+	}
+
+	v.erase(end, v.end());
+}

@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
 
   Evolution::GenoType g(&innovNo, new Evolution::MarkingHistory());
 
-  g.setInputAndOutputNodes(2,1);
+  g.initNodes(2,1);
   g.addNodeAtConnection(1);
   g.addConnection(1,6, 10, true);
 
